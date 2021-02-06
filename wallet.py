@@ -9,7 +9,7 @@ from web3 import Web3
 from web3.middleware import geth_poa_middleware 
 from eth_account import Account
 
-from bit import PrivateKeyTestnet
+from bit import PrivateKeyTestnet, PrivateKey
 from bit.network import NetworkAPI
 
 from constants import *
@@ -52,6 +52,8 @@ def priv_key_to_account(coin, priv_key):
     elif(coin == BTCTEST):
         #print("BTC-Test Account")
         return PrivateKeyTestnet(priv_key)
+    elif(coin == BTC):
+        return PrivateKey(priv_key)
     else:
         print(f"Unable to process {coin}")
         return ""
@@ -66,7 +68,7 @@ def create_eth_tx(account, to, amount):
     amount - amount to send
     """
     gasEstimate = w3.eth.estimateGas(
-        {"from": account.address, "to": recipient, "value": amount}
+        {"from": account.address, "to": to, "value": amount}
     )
     return {
         "from": account.address,
@@ -91,6 +93,8 @@ def create_tx(coin, account, to, amount):
         return create_eth_tx(account, to, amount)
     elif(coin == BTCTEST):
         return PrivateKeyTestnet.prepare_transaction(account.address, [(to, amount, BTC)])
+    elif(coin == BTC):
+        return PrivateKey.prepare_transaction(account.address, [(to, amount, BTC)])
     else:
         print(f"Unable to process {coin}")
         return ""
@@ -117,16 +121,24 @@ def send_tx(coin, account, to, amount):
         return w3.eth.sendRawTransaction(signed_tx.rawTransaction)    
     elif(coin == BTCTEST):
         return NetworkAPI.broadcast_tx_testnet(signed_tx)
+    elif(coin == BTC):
+        return NetworkAPI.broadcast_tx(signed_tx)
     else:
         print(f"Unable to process {coin}")
         return ""
         
 # MAIN
+# Derive Private Keys
 eth_priv_key = get_wallet_privkey(ETH)
 btctest_priv_key = get_wallet_privkey(BTCTEST)
 
+# Convert private keys to account
 eth_acct = priv_key_to_account(ETH, eth_priv_key)
 btctest_acct = priv_key_to_account(BTCTEST, btctest_priv_key)
 
-print(f"ETH Address: {eth_acct.address}")
-print(f"BTC-Test Address: {btctest_acct.address}")
+# ETH Send
+#eth_txid = send_tx(ETH, eth_acct, "0x837F5a0BC310226531458559468Cf60e8C9099fE", 1)
+# BTC-Test Send
+btctest_txid = send_tx(BTCTEST, btctest_acct, "n1iadJMBs4kyQUv39uRWdA7Njw4ERnDdK9", 0.001)
+
+print(btctest_txid)
